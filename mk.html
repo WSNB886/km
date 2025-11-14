@@ -1,0 +1,1474 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+	<title>新挽得界 - 3D沙盒游戏</title>
+	<style>
+		* {
+			margin: 0;
+			padding: 0;
+			box-sizing: border-box;
+		}
+		body {
+			margin: 0;
+			padding: 0;
+			overflow: hidden;
+			background: linear-gradient(to bottom, #1a2980, #26d0ce);
+			font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+			touch-action: none;
+			height: 100vh;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			color: white;
+		}
+		#gameContainer {
+			position: relative;
+			width: 100%;
+			height: 100%;
+			max-width: 1200px;
+			max-height: 800px;
+			box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+			border-radius: 8px;
+			overflow: hidden;
+		}
+		canvas {
+			display: block;
+			width: 100%;
+			height: 100%;
+		}
+		#ui {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			pointer-events: none;
+		}
+		#info {
+			position: absolute;
+			top: 15px;
+			left: 15px;
+			color: white;
+			background-color: rgba(0, 0, 0, 0.6);
+			padding: 12px 15px;
+			border-radius: 8px;
+			font-size: 14px;
+			line-height: 1.5;
+			backdrop-filter: blur(5px);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			max-width: 200px;
+		}
+		#crosshair {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: 24px;
+			height: 24px;
+			transform: translate(-50%, -50%);
+			pointer-events: none;
+		}
+		#crosshair::before, #crosshair::after {
+			content: '';
+			position: absolute;
+			background-color: rgba(255, 255, 255, 0.8);
+			border-radius: 1px;
+		}
+		#crosshair::before {
+			width: 2px;
+			height: 24px;
+			left: 50%;
+			transform: translateX(-50%);
+		}
+		#crosshair::after {
+			width: 24px;
+			height: 2px;
+			top: 50%;
+			transform: translateY(-50%);
+		}
+		#blockIndicator {
+			position: absolute;
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			background-color: rgba(0, 0, 0, 0.6);
+			padding: 8px 15px;
+			border-radius: 8px;
+			color: white;
+			font-size: 14px;
+			backdrop-filter: blur(5px);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+		}
+		#mining-progress {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, 30px);
+			width: 100px;
+			height: 10px;
+			background-color: rgba(0, 0, 0, 0.5);
+			border-radius: 5px;
+			overflow: hidden;
+			display: none;
+		}
+		#mining-progress-bar {
+			height: 100%;
+			width: 0%;
+			background-color: #ff9800;
+			transition: width 0.1s;
+		}
+		#inventory {
+			position: absolute;
+			bottom: 20px;
+			left: 50%;
+			transform: translateX(-50%);
+			display: flex;
+			background-color: rgba(0, 0, 0, 0.6);
+			padding: 8px;
+			border-radius: 8px;
+			backdrop-filter: blur(5px);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			gap: 5px;
+		}
+		.inventory-slot {
+			width: 40px;
+			height: 40px;
+			background-color: rgba(255, 255, 255, 0.1);
+			border-radius: 4px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 20px;
+			cursor: pointer;
+			transition: all 0.2s;
+			border: 2px solid transparent;
+			position: relative;
+		}
+		.inventory-slot.active {
+			border-color: #4CAF50;
+			background-color: rgba(76, 175, 80, 0.2);
+		}
+		.inventory-slot:hover {
+			background-color: rgba(255, 255, 255, 0.2);
+		}
+		.slot-count {
+			position: absolute;
+			bottom: 2px;
+			right: 2px;
+			font-size: 10px;
+			background-color: rgba(0, 0, 0, 0.5);
+			border-radius: 3px;
+			padding: 0 3px;
+		}
+		#backpack {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			transform: translate(-50%, -50%);
+			width: 400px;
+			background-color: rgba(0, 0, 0, 0.8);
+			border-radius: 10px;
+			padding: 20px;
+			backdrop-filter: blur(10px);
+			border: 1px solid rgba(255, 255, 255, 0.2);
+			display: none;
+			z-index: 10;
+		}
+		#backpack h2 {
+			text-align: center;
+			margin-bottom: 15px;
+			color: #fff;
+		}
+		.backpack-grid {
+			display: grid;
+			grid-template-columns: repeat(5, 1fr);
+			gap: 10px;
+		}
+		.backpack-slot {
+			width: 60px;
+			height: 60px;
+			background-color: rgba(255, 255, 255, 0.1);
+			border-radius: 6px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 24px;
+			cursor: pointer;
+			transition: all 0.2s;
+			position: relative;
+		}
+		.backpack-slot:hover {
+			background-color: rgba(255, 255, 255, 0.2);
+		}
+		#close-backpack {
+			position: absolute;
+			top: 10px;
+			right: 10px;
+			background: none;
+			border: none;
+			color: white;
+			font-size: 20px;
+			cursor: pointer;
+		}
+		#mobile-controls {
+			position: absolute;
+			bottom: 20px;
+			width: 100%;
+			display: none;
+			justify-content: space-between;
+			padding: 0 25px;
+			box-sizing: border-box;
+			pointer-events: none;
+		}
+		.joystick-container {
+			position: relative;
+			width: 120px;
+			height: 120px;
+			pointer-events: auto;
+		}
+		.joystick-base {
+			width: 100%;
+			height: 100%;
+			background-color: rgba(255, 255, 255, 0.2);
+			border-radius: 50%;
+			backdrop-filter: blur(5px);
+			border: 2px solid rgba(255, 255, 255, 0.3);
+			box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+		}
+		.joystick-handle {
+			position: absolute;
+			top: 50%;
+			left: 50%;
+			width: 50px;
+			height: 50px;
+			background-color: rgba(255, 255, 255, 0.7);
+			border-radius: 50%;
+			transform: translate(-50%, -50%);
+			transition: transform 0.1s;
+			box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+		}
+		.action-buttons {
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			pointer-events: auto;
+		}
+		.action-btn {
+			width: 70px;
+			height: 70px;
+			background-color: rgba(255, 255, 255, 0.25);
+			border-radius: 50%;
+			margin: 8px;
+			display: flex;
+			justify-content: center;
+			align-items: center;
+			font-size: 28px;
+			user-select: none;
+			touch-action: manipulation;
+			color: white;
+			backdrop-filter: blur(5px);
+			border: 2px solid rgba(255, 255, 255, 0.2);
+			box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+			transition: all 0.1s;
+		}
+		.action-btn:active {
+			background-color: rgba(255, 255, 255, 0.4);
+			transform: scale(0.95);
+		}
+		#sensitivity-control {
+			position: absolute;
+			top: 15px;
+			right: 15px;
+			background-color: rgba(0, 0, 0, 0.6);
+			padding: 10px 15px;
+			border-radius: 8px;
+			backdrop-filter: blur(5px);
+			border: 1px solid rgba(255, 255, 255, 0.1);
+			color: white;
+			display: flex;
+			flex-direction: column;
+			align-items: center;
+			gap: 8px;
+		}
+		#sensitivity-slider {
+			width: 150px;
+		}
+		#loading {
+			position: absolute;
+			top: 0;
+			left: 0;
+			width: 100%;
+			height: 100%;
+			background: linear-gradient(to bottom, #1a2980, #26d0ce);
+			display: flex;
+			flex-direction: column;
+			justify-content: center;
+			align-items: center;
+			color: white;
+			z-index: 100;
+			transition: opacity 0.5s;
+		}
+		#loading h1 {
+			font-size: 2.5rem;
+			margin-bottom: 20px;
+			text-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+		}
+		#loading p {
+			font-size: 1.2rem;
+			margin-bottom: 30px;
+			text-align: center;
+		}
+		.progress-bar {
+			width: 300px;
+			height: 10px;
+			background-color: rgba(255, 255, 255, 0.2);
+			border-radius: 5px;
+			overflow: hidden;
+		}
+		.progress {
+			height: 100%;
+			width: 0%;
+			background-color: #4CAF50;
+			transition: width 0.3s;
+		}
+		#error-message {
+			color: #ff6b6b;
+			margin-top: 20px;
+			text-align: center;
+			max-width: 80%;
+			display: none;
+		}
+		@media (max-width: 768px) {
+			#mobile-controls {
+				display: flex;
+			}
+			#info {
+				font-size: 12px;
+				padding: 10px;
+				max-width: 180px;
+			}
+			#inventory {
+				bottom: 100px;
+			}
+			#backpack {
+				width: 90%;
+			}
+			.backpack-grid {
+				grid-template-columns: repeat(4, 1fr);
+			}
+		}
+	</style>
+</head>
+<body>
+	<div id="loading">
+		<h1>新挽得界</h1>
+		<p>正在加载游戏资源...</p>
+		<div class="progress-bar">
+			<div class="progress" id="progress"></div>
+		</div>
+		<div id="error-message"></div>
+	</div>
+
+	<div id="gameContainer">
+		<div id="ui">
+			<div id="info">
+				移动: WASD/方向键<br>
+				跳跃: 空格键<br>
+				破坏方块: 左键点击<br>
+				放置方块: 右键点击<br>
+				背包: E键<br>
+				切换方块: 数字键1-5或滚轮
+			</div>
+			<div id="sensitivity-control">
+				<div>视角灵敏度</div>
+				<input type="range" id="sensitivity-slider" min="0.5" max="3" step="0.1" value="1.5">
+				<div id="sensitivity-value">1.5</div>
+			</div>
+			<div id="crosshair"></div>
+			<div id="mining-progress">
+				<div id="mining-progress-bar"></div>
+			</div>
+			<div id="blockIndicator">当前方块: 泥土</div>
+			<div id="inventory">
+				<!-- 物品栏插槽将由JavaScript动态生成 -->
+			</div>
+			<div id="backpack">
+				<h2>背包</h2>
+				<button id="close-backpack">✕</button>
+				<div class="backpack-grid">
+					<!-- 背包插槽将由JavaScript动态生成 -->
+				</div>
+			</div>
+			<div id="mobile-controls">
+				<div class="joystick-container">
+					<div class="joystick-base"></div>
+					<div class="joystick-handle"></div>
+				</div>
+				<div class="action-buttons">
+					<div class="action-btn" id="jump-btn">↑</div>
+					<div class="action-btn" id="break-btn">🔨</div>
+					<div class="action-btn" id="place-btn">🧱</div>
+					<div class="action-btn" id="backpack-btn">🎒</div>
+				</div>
+			</div>
+		</div>
+	</div>
+
+	<!-- 使用可靠的Three.js CDN -->
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+	
+	<script>
+		// 检测移动设备
+		const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+		// 全局变量
+		let scene, camera, renderer;
+		let blocks = new Map();
+		let moveState = {
+			forward: false,
+			backward: false,
+			left: false,
+			right: false,
+			jump: false
+		};
+		
+		// 物理参数
+		const gravity = -25;
+		const velocity = new THREE.Vector3();
+		const direction = new THREE.Vector3();
+		const playerHeight = 1.8;
+		const playerRadius = 0.5;
+		let isOnGround = false;
+		
+		// 视角控制
+		let pitch = 0;
+		let yaw = 0;
+		let mouseSensitivity = 1.5; // 默认灵敏度
+		
+		// 方块类型
+		const blockTypes = [
+			{ id: 'grass', name: '草地', icon: '🌿', color: 0x7CFC00, hardness: 1.0 },
+			{ id: 'dirt', name: '泥土', icon: '🟫', color: 0x8B4513, hardness: 0.8 },
+			{ id: 'stone', name: '石头', icon: '🪨', color: 0x808080, hardness: 2.0 },
+			{ id: 'wood', name: '木头', icon: '🪵', color: 0x8B4513, hardness: 1.2 },
+			{ id: 'leaves', name: '树叶', icon: '🍃', color: 0x228B22, hardness: 0.5 },
+			{ id: 'sand', name: '沙子', icon: '🟨', color: 0xF4D03F, hardness: 0.7 },
+			{ id: 'water', name: '水', icon: '💧', color: 0x3498DB, hardness: 0.3 },
+			{ id: 'glass', name: '玻璃', icon: '🔲', color: 0xBDC3C7, hardness: 0.9 },
+			{ id: 'brick', name: '砖块', icon: '🧱', color: 0xC0392B, hardness: 1.5 },
+			{ id: 'coal', name: '煤炭', icon: '⚫', color: 0x2C3E50, hardness: 1.8 }
+		];
+		let currentBlockType = 'dirt';
+		
+		// 挖掘进度
+		let miningProgress = 0;
+		let miningTarget = null;
+		let isMining = false;
+		let miningSpeed = 0.02;
+		
+		// 物品栏和背包系统
+		let inventory = Array(5).fill(null);
+		let backpack = Array(20).fill(null);
+		let itemDrops = []; // 掉落物数组
+		
+		// 初始化物品栏和背包
+		function initInventory() {
+			// 初始化物品栏
+			inventory = [
+				{ type: 'grass', count: 10 },
+				{ type: 'dirt', count: 10 },
+				{ type: 'stone', count: 10 },
+				{ type: 'wood', count: 10 },
+				{ type: 'leaves', count: 10 }
+			];
+			
+			// 初始化背包
+			backpack = [
+				{ type: 'sand', count: 5 },
+				{ type: 'water', count: 5 },
+				{ type: 'glass', count: 5 },
+				{ type: 'brick', count: 5 },
+				{ type: 'coal', count: 5 },
+				null, null, null, null, null,
+				null, null, null, null, null,
+				null, null, null, null, null
+			];
+			
+			// 创建物品栏UI
+			updateInventoryUI();
+			
+			// 创建背包UI
+			updateBackpackUI();
+			
+			updateActiveInventorySlot();
+		}
+		
+		// 更新物品栏UI
+		function updateInventoryUI() {
+			const inventoryElement = document.getElementById('inventory');
+			inventoryElement.innerHTML = '';
+			
+			inventory.forEach((item, index) => {
+				const slot = document.createElement('div');
+				slot.className = 'inventory-slot';
+				slot.dataset.index = index;
+				
+				if (item) {
+					const blockType = blockTypes.find(b => b.id === item.type);
+					slot.innerHTML = `${blockType.icon}<span class="slot-count">${item.count}</span>`;
+				}
+				
+				slot.addEventListener('click', () => {
+					if (item) {
+						currentBlockType = item.type;
+						updateBlockIndicator();
+						updateActiveInventorySlot();
+					}
+				});
+				
+				inventoryElement.appendChild(slot);
+			});
+		}
+		
+		// 更新背包UI
+		function updateBackpackUI() {
+			const backpackElement = document.querySelector('.backpack-grid');
+			backpackElement.innerHTML = '';
+			
+			backpack.forEach((item, index) => {
+				const slot = document.createElement('div');
+				slot.className = 'backpack-slot';
+				slot.dataset.index = index;
+				
+				if (item) {
+					const blockType = blockTypes.find(b => b.id === item.type);
+					slot.innerHTML = `${blockType.icon}<span class="slot-count">${item.count}</span>`;
+				}
+				
+				slot.addEventListener('click', () => {
+					if (item) {
+						// 添加到物品栏如果有空位
+						const emptySlotIndex = inventory.findIndex(slot => slot === null);
+						if (emptySlotIndex !== -1) {
+							inventory[emptySlotIndex] = { ...item };
+							backpack[index] = null;
+							updateInventoryUI();
+							updateBackpackUI();
+						}
+					}
+				});
+				
+				backpackElement.appendChild(slot);
+			});
+		}
+		
+		// 更新活动物品栏插槽
+		function updateActiveInventorySlot() {
+			const slots = document.querySelectorAll('.inventory-slot');
+			slots.forEach((slot, index) => {
+				const item = inventory[index];
+				if (item && item.type === currentBlockType) {
+					slot.classList.add('active');
+				} else {
+					slot.classList.remove('active');
+				}
+			});
+		}
+		
+		// 更新方块指示器
+		function updateBlockIndicator() {
+			const blockType = blockTypes.find(b => b.id === currentBlockType);
+			document.getElementById('blockIndicator').textContent = `当前方块: ${blockType.name}`;
+		}
+		
+		// 虚拟摇杆变量
+		let joystickActive = false;
+		let joystickPosition = { x: 0, y: 0 };
+		let joystickOrigin = { x: 0, y: 0 };
+		let joystickHandle = null;
+		let joystickBase = null;
+		
+		// 加载状态管理
+		let resourcesLoaded = 0;
+		const totalResources = 5;
+		let gameInitialized = false;
+
+		// 显示错误信息
+		function showError(message) {
+			const errorEl = document.getElementById('error-message');
+			errorEl.textContent = message;
+			errorEl.style.display = 'block';
+			console.error(message);
+		}
+
+		// 更新加载进度
+		function updateProgress() {
+			resourcesLoaded++;
+			const progress = (resourcesLoaded / totalResources) * 100;
+			document.getElementById('progress').style.width = `${progress}%`;
+			
+			if (resourcesLoaded >= totalResources && !gameInitialized) {
+				gameInitialized = true;
+				setTimeout(() => {
+					document.getElementById('loading').style.opacity = '0';
+					setTimeout(() => {
+						document.getElementById('loading').style.display = 'none';
+						// 开始游戏循环
+						animate();
+					}, 500);
+				}, 500);
+			}
+		}
+
+		// 初始化函数
+		function init() {
+			try {
+				// 检查Three.js是否加载成功
+				if (typeof THREE === 'undefined') {
+					throw new Error('Three.js库加载失败，请检查网络连接');
+				}
+
+				// 创建场景
+				scene = new THREE.Scene();
+				scene.background = new THREE.Color(0x87CEEB);
+				scene.fog = new THREE.Fog(0x87CEEB, 20, 100);
+				updateProgress();
+
+				// 创建相机
+				camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+				camera.position.set(0, 10, 0);
+				updateProgress();
+
+				// 创建渲染器
+				const container = document.getElementById('gameContainer');
+				renderer = new THREE.WebGLRenderer({ 
+					antialias: true,
+					powerPreference: "high-performance"
+				});
+				renderer.setSize(container.clientWidth, container.clientHeight);
+				renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+				container.appendChild(renderer.domElement);
+				updateProgress();
+
+				// 添加光源
+				const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+				scene.add(ambientLight);
+
+				const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+				directionalLight.position.set(50, 50, 25);
+				scene.add(directionalLight);
+				updateProgress();
+
+				// 创建世界
+				createWorld();
+				updateProgress();
+
+				// 初始化物品栏和背包
+				initInventory();
+				
+				// 设置事件监听
+				setupEventListeners();
+				
+				// 初始化虚拟摇杆
+				if (isMobile) {
+					initJoystick();
+				}
+				
+			} catch (error) {
+				showError(`初始化错误: ${error.message}`);
+			}
+		}
+
+		// 初始化虚拟摇杆
+		function initJoystick() {
+			joystickHandle = document.querySelector('.joystick-handle');
+			joystickBase = document.querySelector('.joystick-base');
+			const joystickContainer = document.querySelector('.joystick-container');
+			
+			// 获取摇杆容器位置和大小
+			const rect = joystickContainer.getBoundingClientRect();
+			joystickOrigin.x = rect.left + rect.width / 2;
+			joystickOrigin.y = rect.top + rect.height / 2;
+			
+			// 摇杆触摸事件
+			joystickContainer.addEventListener('touchstart', handleJoystickStart);
+			document.addEventListener('touchmove', handleJoystickMove);
+			document.addEventListener('touchend', handleJoystickEnd);
+		}
+
+		// 处理摇杆开始
+		function handleJoystickStart(e) {
+			e.preventDefault();
+			joystickActive = true;
+			updateJoystickPosition(e.touches[0]);
+		}
+
+		// 处理摇杆移动
+		function handleJoystickMove(e) {
+			if (!joystickActive) return;
+			e.preventDefault();
+			updateJoystickPosition(e.touches[0]);
+		}
+
+		// 处理摇杆结束
+		function handleJoystickEnd(e) {
+			joystickActive = false;
+			resetJoystick();
+		}
+
+		// 更新摇杆位置
+		function updateJoystickPosition(touch) {
+			const rect = document.querySelector('.joystick-container').getBoundingClientRect();
+			const baseRadius = rect.width / 2;
+			const handleRadius = 25; // 摇杆手柄半径
+			
+			// 计算相对于摇杆中心的位置
+			const touchX = touch.clientX - joystickOrigin.x;
+			const touchY = touch.clientY - joystickOrigin.y;
+			
+			// 计算距离
+			const distance = Math.sqrt(touchX * touchX + touchY * touchY);
+			const maxDistance = baseRadius - handleRadius;
+			
+			// 限制摇杆在底座范围内
+			if (distance > maxDistance) {
+				const angle = Math.atan2(touchY, touchX);
+				joystickPosition.x = Math.cos(angle) * maxDistance;
+				joystickPosition.y = Math.sin(angle) * maxDistance;
+			} else {
+				joystickPosition.x = touchX;
+				joystickPosition.y = touchY;
+			}
+			
+			// 更新摇杆手柄位置
+			joystickHandle.style.transform = `translate(calc(-50% + ${joystickPosition.x}px), calc(-50% + ${joystickPosition.y}px))`;
+			
+			// 更新移动状态
+			updateMoveStateFromJoystick();
+		}
+
+		// 重置摇杆位置
+		function resetJoystick() {
+			joystickPosition.x = 0;
+			joystickPosition.y = 0;
+			joystickHandle.style.transform = 'translate(-50%, -50%)';
+			
+			// 重置移动状态
+			moveState.forward = false;
+			moveState.backward = false;
+			moveState.left = false;
+			moveState.right = false;
+		}
+
+		// 根据摇杆位置更新移动状态 - 修复方向问题
+		function updateMoveStateFromJoystick() {
+			const deadZone = 10; // 死区，避免微小移动
+			
+			// 重置移动状态
+			moveState.forward = false;
+			moveState.backward = false;
+			moveState.left = false;
+			moveState.right = false;
+			
+			// 检查是否在死区内
+			if (Math.abs(joystickPosition.x) < deadZone && Math.abs(joystickPosition.y) < deadZone) {
+				return;
+			}
+			
+			// 根据摇杆位置设置移动方向 - 修复方向问题
+			// 现在：向上推是向前，向下推是向后，向左推是向左，向右推是向右
+			if (joystickPosition.y < -deadZone) {
+				moveState.forward = true;
+			} else if (joystickPosition.y > deadZone) {
+				moveState.backward = true;
+			}
+			
+			if (joystickPosition.x < -deadZone) {
+				moveState.left = true;
+			} else if (joystickPosition.x > deadZone) {
+				moveState.right = true;
+			}
+		}
+
+		// 创建世界
+		function createWorld() {
+			const worldSize = 16;
+			
+			// 创建地面
+			for (let x = -worldSize; x <= worldSize; x++) {
+				for (let z = -worldSize; z <= worldSize; z++) {
+					// 创建地形高度变化
+					const height = Math.floor(Math.sin(x * 0.2) * Math.cos(z * 0.2) * 3);
+					
+					// 创建地面方块
+					for (let y = -5; y <= height; y++) {
+						const blockType = y === height ? 'grass' : (y > height - 3 ? 'dirt' : 'stone');
+						addBlock(x, y, z, blockType);
+					}
+					
+					// 随机放置一些树木
+					if (Math.random() < 0.05 && height >= 0) {
+						const treeHeight = 4 + Math.floor(Math.random() * 3);
+						
+						// 树干
+						for (let y = height + 1; y <= height + treeHeight; y++) {
+							addBlock(x, y, z, 'wood');
+						}
+						
+						// 树叶
+						for (let dx = -2; dx <= 2; dx++) {
+							for (let dz = -2; dz <= 2; dz++) {
+								for (let dy = height + treeHeight - 1; dy <= height + treeHeight + 2; dy++) {
+									// 创建球形树叶
+									if (Math.sqrt(dx*dx + dz*dz + (dy - (height + treeHeight + 0.5))*(dy - (height + treeHeight + 0.5))) <= 2.5) {
+										addBlock(x + dx, dy, z + dz, 'leaves');
+									}
+								}
+							}
+						}
+					}
+				}
+			}
+		}
+
+		// 添加方块
+		function addBlock(x, y, z, type) {
+			const key = `${x},${y},${z}`;
+			if (blocks.has(key)) return;
+			
+			// 创建方块材质
+			const blockType = blockTypes.find(b => b.id === type);
+			const geometry = new THREE.BoxGeometry(1, 1, 1);
+			const material = new THREE.MeshLambertMaterial({ 
+				color: blockType.color,
+				transparent: type === 'water' || type === 'glass',
+				opacity: type === 'water' ? 0.7 : (type === 'glass' ? 0.5 : 1)
+			});
+			const block = new THREE.Mesh(geometry, material);
+			block.position.set(x, y, z);
+			block.userData = { type, x, y, z };
+			scene.add(block);
+			blocks.set(key, block);
+		}
+
+		// 移除方块
+		function removeBlock(x, y, z) {
+			const key = `${x},${y},${z}`;
+			if (blocks.has(key)) {
+				const block = blocks.get(key);
+				scene.remove(block);
+				blocks.delete(key);
+				
+				// 创建掉落物
+				createItemDrop(x, y, z, block.userData.type);
+				
+				return true;
+			}
+			return false;
+		}
+
+		// 创建掉落物
+		function createItemDrop(x, y, z, type) {
+			const blockType = blockTypes.find(b => b.id === type);
+			const geometry = new THREE.SphereGeometry(0.2, 8, 8);
+			const material = new THREE.MeshLambertMaterial({ color: blockType.color });
+			const drop = new THREE.Mesh(geometry, material);
+			drop.position.set(x + 0.5, y + 0.5, z + 0.5);
+			drop.userData = { 
+				type: type,
+				velocity: new THREE.Vector3(
+					(Math.random() - 0.5) * 0.1,
+					0.2,
+					(Math.random() - 0.5) * 0.1
+				),
+				collected: false
+			};
+			scene.add(drop);
+			itemDrops.push(drop);
+		}
+
+		// 更新掉落物
+		function updateItemDrops() {
+			for (let i = itemDrops.length - 1; i >= 0; i--) {
+				const drop = itemDrops[i];
+				
+				// 应用重力
+				drop.userData.velocity.y -= 0.01;
+				
+				// 更新位置
+				drop.position.add(drop.userData.velocity);
+				
+				// 检查是否与玩家碰撞
+				const distance = drop.position.distanceTo(camera.position);
+				if (distance < 1.5 && !drop.userData.collected) {
+					// 收集掉落物
+					collectItemDrop(drop, i);
+				}
+				
+				// 检查是否落地
+				const blockBelow = getBlock(
+					Math.floor(drop.position.x),
+					Math.floor(drop.position.y - 0.3),
+					Math.floor(drop.position.z)
+				);
+				
+				if (blockBelow) {
+					drop.position.y = Math.floor(drop.position.y) + 0.5;
+					drop.userData.velocity.y = 0;
+				}
+				
+				// 如果掉落物太远，移除它
+				if (drop.position.distanceTo(camera.position) > 20) {
+					scene.remove(drop);
+					itemDrops.splice(i, 1);
+				}
+			}
+		}
+
+		// 收集掉落物
+		function collectItemDrop(drop, index) {
+			drop.userData.collected = true;
+			
+			// 添加到背包
+			const existingItemIndex = backpack.findIndex(item => item && item.type === drop.userData.type);
+			
+			if (existingItemIndex !== -1) {
+				backpack[existingItemIndex].count++;
+			} else {
+				const emptySlotIndex = backpack.findIndex(item => item === null);
+				if (emptySlotIndex !== -1) {
+					backpack[emptySlotIndex] = { type: drop.userData.type, count: 1 };
+				}
+			}
+			
+			// 从场景中移除掉落物
+			scene.remove(drop);
+			itemDrops.splice(index, 1);
+			
+			// 更新背包UI
+			updateBackpackUI();
+		}
+
+		// 获取方块
+		function getBlock(x, y, z) {
+			const key = `${x},${y},${z}`;
+			return blocks.get(key);
+		}
+
+		// 检查位置是否有方块
+		function hasBlock(x, y, z) {
+			const key = `${Math.floor(x)},${Math.floor(y)},${Math.floor(z)}`;
+			return blocks.has(key);
+		}
+
+		// 射线检测
+		function raycast(from, direction, maxDistance = 10) {
+			const raycaster = new THREE.Raycaster(from, direction);
+			const blockArray = Array.from(blocks.values());
+			
+			if (blockArray.length === 0) return null;
+			
+			const intersects = raycaster.intersectObjects(blockArray);
+			
+			if (intersects.length > 0 && intersects[0].distance <= maxDistance) {
+				return intersects[0];
+			}
+			return null;
+		}
+
+		// 改进的碰撞检测 - 防止穿墙
+		function checkCollision(newPos) {
+			// 玩家碰撞盒的各个点
+			const points = [
+				// 底部点
+				{ x: newPos.x - playerRadius, y: newPos.y - playerHeight/2, z: newPos.z - playerRadius },
+				{ x: newPos.x + playerRadius, y: newPos.y - playerHeight/2, z: newPos.z - playerRadius },
+				{ x: newPos.x - playerRadius, y: newPos.y - playerHeight/2, z: newPos.z + playerRadius },
+				{ x: newPos.x + playerRadius, y: newPos.y - playerHeight/2, z: newPos.z + playerRadius },
+				
+				// 顶部点
+				{ x: newPos.x - playerRadius, y: newPos.y + playerHeight/2, z: newPos.z - playerRadius },
+				{ x: newPos.x + playerRadius, y: newPos.y + playerHeight/2, z: newPos.z - playerRadius },
+				{ x: newPos.x - playerRadius, y: newPos.y + playerHeight/2, z: newPos.z + playerRadius },
+				{ x: newPos.x + playerRadius, y: newPos.y + playerHeight/2, z: newPos.z + playerRadius },
+				
+				// 中间点
+				{ x: newPos.x - playerRadius, y: newPos.y, z: newPos.z },
+				{ x: newPos.x + playerRadius, y: newPos.y, z: newPos.z },
+				{ x: newPos.x, y: newPos.y, z: newPos.z - playerRadius },
+				{ x: newPos.x, y: newPos.y, z: newPos.z + playerRadius },
+			];
+			
+			// 检查所有点是否与方块碰撞
+			for (const point of points) {
+				if (hasBlock(point.x, point.y, point.z)) {
+					return true;
+				}
+			}
+			
+			return false;
+		}
+
+		// 设置事件监听器
+		function setupEventListeners() {
+			// 键盘事件
+			document.addEventListener('keydown', (event) => {
+				switch (event.code) {
+					case 'KeyW':
+					case 'ArrowUp':
+						moveState.forward = true;
+						break;
+					case 'KeyS':
+					case 'ArrowDown':
+						moveState.backward = true;
+						break;
+					case 'KeyA':
+					case 'ArrowLeft':
+						moveState.left = true;
+						break;
+					case 'KeyD':
+					case 'ArrowRight':
+						moveState.right = true;
+						break;
+					case 'Space':
+						if (isOnGround) {
+							moveState.jump = true;
+						}
+						break;
+					case 'Digit1':
+					case 'Digit2':
+					case 'Digit3':
+					case 'Digit4':
+					case 'Digit5':
+						const index = parseInt(event.code[5]) - 1;
+						if (index < inventory.length && inventory[index]) {
+							currentBlockType = inventory[index].type;
+							updateBlockIndicator();
+							updateActiveInventorySlot();
+						}
+						break;
+					case 'KeyE':
+						toggleBackpack();
+						break;
+				}
+			});
+
+			document.addEventListener('keyup', (event) => {
+				switch (event.code) {
+					case 'KeyW':
+					case 'ArrowUp':
+						moveState.forward = false;
+						break;
+					case 'KeyS':
+					case 'ArrowDown':
+						moveState.backward = false;
+						break;
+					case 'KeyA':
+					case 'ArrowLeft':
+						moveState.left = false;
+						break;
+					case 'KeyD':
+					case 'ArrowRight':
+						moveState.right = false;
+						break;
+					case 'Space':
+						moveState.jump = false;
+						break;
+				}
+			});
+
+			// 鼠标滚轮切换方块
+			document.addEventListener('wheel', (event) => {
+				if (document.pointerLockElement === renderer.domElement) {
+					event.preventDefault();
+					const currentIndex = inventory.findIndex(item => item && item.type === currentBlockType);
+					let newIndex;
+					
+					if (event.deltaY > 0) {
+						// 向下滚动，选择下一个方块
+						newIndex = (currentIndex + 1) % inventory.length;
+					} else {
+						// 向上滚动，选择上一个方块
+						newIndex = (currentIndex - 1 + inventory.length) % inventory.length;
+					}
+					
+					// 找到下一个有物品的插槽
+					let attempts = 0;
+					while (attempts < inventory.length) {
+						if (inventory[newIndex]) {
+							currentBlockType = inventory[newIndex].type;
+							updateBlockIndicator();
+							updateActiveInventorySlot();
+							break;
+						}
+						newIndex = (newIndex + 1) % inventory.length;
+						attempts++;
+					}
+				}
+			});
+
+			// 鼠标事件
+			let isMouseDown = false;
+			let mouseButton = 0;
+
+			document.addEventListener('mousedown', (event) => {
+				isMouseDown = true;
+				mouseButton = event.button;
+				
+				if (mouseButton === 2) {
+					event.preventDefault();
+				}
+				
+				// 开始挖掘或放置方块
+				if (mouseButton === 0) {
+					// 开始挖掘
+					startMining();
+				} else if (mouseButton === 2) {
+					// 立即处理方块放置
+					handleBlockAction(mouseButton);
+				}
+			});
+
+			document.addEventListener('mouseup', (event) => {
+				isMouseDown = false;
+				mouseButton = event.button;
+				
+				// 停止挖掘
+				if (mouseButton === 0) {
+					stopMining();
+				}
+			});
+
+			document.addEventListener('contextmenu', (event) => {
+				event.preventDefault();
+			});
+
+			// 视角控制
+			document.addEventListener('mousemove', (event) => {
+				if (document.pointerLockElement === renderer.domElement) {
+					yaw -= event.movementX * mouseSensitivity * 0.002;
+					pitch -= event.movementY * mouseSensitivity * 0.002;
+					pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+				}
+			});
+
+			// 灵敏度控制
+			const sensitivitySlider = document.getElementById('sensitivity-slider');
+			const sensitivityValue = document.getElementById('sensitivity-value');
+			
+			sensitivitySlider.addEventListener('input', (e) => {
+				mouseSensitivity = parseFloat(e.target.value);
+				sensitivityValue.textContent = mouseSensitivity.toFixed(1);
+			});
+
+			// 请求指针锁定
+			renderer.domElement.addEventListener('click', () => {
+				if (!isMobile) {
+					renderer.domElement.requestPointerLock();
+				}
+			});
+
+			// 关闭背包按钮
+			document.getElementById('close-backpack').addEventListener('click', () => {
+				toggleBackpack();
+			});
+
+			// 移动设备控制
+			if (isMobile) {
+				document.getElementById('jump-btn').addEventListener('touchstart', (e) => {
+					if (isOnGround) moveState.jump = true;
+					e.preventDefault();
+				});
+				document.getElementById('jump-btn').addEventListener('touchend', (e) => {
+					moveState.jump = false;
+					e.preventDefault();
+				});
+				
+				document.getElementById('break-btn').addEventListener('touchstart', (e) => {
+					startMining();
+					e.preventDefault();
+				});
+				
+				document.getElementById('break-btn').addEventListener('touchend', (e) => {
+					stopMining();
+					e.preventDefault();
+				});
+				
+				document.getElementById('place-btn').addEventListener('touchstart', (e) => {
+					handleBlockAction(2); // 放置
+					e.preventDefault();
+				});
+				
+				document.getElementById('backpack-btn').addEventListener('touchstart', (e) => {
+					toggleBackpack();
+					e.preventDefault();
+				});
+				
+				// 触摸视角控制
+				let lastTouchX = 0;
+				let lastTouchY = 0;
+				let isRotating = false;
+
+				document.addEventListener('touchstart', (event) => {
+					if (event.touches.length === 1 && !joystickActive) {
+						isRotating = true;
+						lastTouchX = event.touches[0].clientX;
+						lastTouchY = event.touches[0].clientY;
+					如果
+				如果);
+
+				document.addEventListener('touchmove', (event) => {
+					if.x=moveVector.x；(isRotating && event.touches.length === 1 && !joystickActive) {
+						const touch = event.touches[0];
+						const deltaX = touch.clientX - lastTouchX;
+						const deltaY = touch.clientY - lastTouchY;
+						
+						yaw -= deltaX * mouseSensitivity * 0.003;
+						pitch -= deltaY * mouseSensitivity * 0.003;
+						pitch = Math.max(-Math.PI/2, Math.min(Math.PI/2, pitch));
+						
+						lastTouchX = touch.clientX;
+						lastTouchY = touch.clientY;
+					}
+				});
+
+				document.addEventListener('touchend', () => {
+					isRotating = false;
+				});
+			}
+
+			// 窗口大小调整
+			window.addEventListener('resize', onWindowResize);
+		}
+
+		// 开始挖掘
+		function startMining() {
+			const rayDirection = new THREE.Vector3(0, 0, -1);
+			rayDirection.applyEuler(camera.rotation);
+			
+			const intersection = raycast(camera.position, rayDirection, 10);
+			
+			if (intersection) {
+				isMining = true;
+				miningTarget = intersection.object;
+				miningProgress = 0;
+				
+				// 根据方块硬度调整挖掘速度
+				const blockType = blockTypes.find(b => b.id === miningTarget.userData.type);
+				miningSpeed = 0.02 / blockType.hardness;
+				
+				document.getElementById('mining-progress').style.display = 'block';
+				document.getElementById('mining-progress-bar').style.width = '0%';
+			}
+		}
+
+		// 停止挖掘
+		function stopMining() {
+			isMining = false;
+			miningTarget = null;
+			miningProgress = 0;
+			document.getElementById('mining-progress').style.display = 'none';
+		}
+
+		// 更新挖掘进度
+		function updateMining() {
+			if (!isMining || !miningTarget) return;
+			
+			miningProgress += miningSpeed; // 根据方块硬度调整挖掘速度
+			document.getElementById('mining-progress-bar').style.width = `${Math.min(miningProgress * 100, 100)}%`;
+			
+			if (miningProgress >= 1) {
+				// 挖掘完成，移除方块
+				const blockPos = miningTarget.position;
+				removeBlock(blockPos.x, blockPos.y, blockPos.z);
+				stopMining();
+			}
+		}
+
+		// 处理方块操作
+		function handleBlockAction(button) {
+			const rayDirection = new THREE.Vector3(0, 0, -1);
+			rayDirection.applyEuler(camera.rotation);
+			
+			const intersection = raycast(camera.position, rayDirection, 10);
+			
+			if (intersection) {
+				const block = intersection.object;
+				const blockPos = block.position;
+				
+				if (button === 2) { // 放置
+					const faceNormal = intersection.face.normal;
+					const placeX = blockPos.x + Math.round(faceNormal.x);
+					const placeY = blockPos.y + Math.round(faceNormal.y);
+					const placeZ = blockPos.z + Math.round(faceNormal.z);
+					
+					// 确保不会在玩家位置放置方块
+					const playerBlockX = Math.floor(camera.position.x);
+					const playerBlockY = Math.floor(camera.position.y - playerHeight/2);
+					const playerBlockZ = Math.floor(camera.position.z);
+					
+					if (!(placeX === playerBlockX && placeY === playerBlockY && placeZ === playerBlockZ) &&
+						!(placeX === playerBlockX && placeY === playerBlockY + 1 && placeZ === playerBlockZ) &&
+						!checkCollision(new THREE.Vector3(placeX, placeY, placeZ))) {
+						
+						// 检查物品栏中是否有该方块
+						const inventoryItem = inventory.find(item => item && item.type === currentBlockType);
+						if (inventoryItem && inventoryItem.count > 0) {
+							addBlock(placeX, placeY, placeZ, currentBlockType);
+							inventoryItem.count--;
+							updateInventoryUI();
+						}
+					}
+				}
+			}
+		}
+
+		// 切换背包显示
+		function toggleBackpack() {
+			const backpack = document.getElementById('backpack');
+			if (backpack.style.display === 'block') {
+				backpack.style.display = 'none';
+				if (!isMobile) {
+					document.exitPointerLock();
+				}
+			} else {
+				backpack.style.display = 'block';
+				if (!isMobile) {
+					document.exitPointerLock();
+				}
+			}
+		}
+
+		// 窗口大小调整处理
+		function onWindowResize() {
+			const container = document.getElementById('gameContainer');
+			camera.aspect = container.clientWidth / container.clientHeight;
+			camera.updateProjectionMatrix();
+			renderer.setSize(container.clientWidth, container.clientHeight);
+		}
+
+		// 游戏循环
+		function animate() {
+			if (!gameInitialized) return;
+			
+			requestAnimationFrame(animate);
+			
+			// 更新挖掘进度
+			if (isMining) {
+				updateMining();
+			}
+			
+			// 更新掉落物
+			updateItemDrops();
+			
+			// 更新相机方向
+			camera.rotation.order = 'YXZ';
+			camera.rotation.y = yaw;
+			camera.rotation.x = pitch;
+			
+			// 处理移动
+direction.z=数字(moveState.forward)-数字(moveState.backward)；
+direction.x=数字(moveState.right)-数字(moveState.left)；
+direction.normalize()；
+			
+// 应用移动速度 - 根据相机方向移动
+常数movespeed=10；
+Const forward=新的THREE.Vector3(0，0，-1)；
+forward.apply四元数(camera.quaternion)；
+forward.y=0；
+forward.normalize()；
+			
+Const right=新的THREE.Vector3(1，0，0)；
+right.apply四元数(camera.quaternion)；
+right.y=0；
+right.normalize()；
+			
+// 计算移动向量
+const moveVector=new THREE.Vector3()；
+if(方向。z！==0)moveVector.Add(向前.克隆()。multiplyScalar(方向.z*movespeed))；
+if(方向。x！==0)moveVector.add(右。克隆()。multiplyScalar(方向.x*movespeed))；
+			
+// 设置水平速度
+velocity.x=moveVector.x；
+velocity.z=moveVector.z；
+			
+// 应用重力
+velocity.y+=重力*0.016；
+			
+// 跳跃
+if(moveState.jump&&isOnGround){
+velocity.y=10；
+isOnGround=false；
+			}
+			
+// 应用移动 - 使用改进的碰撞检测
+Const delta=速度.克隆().乘以标量(0.016)；
+Const newpos=camera.position.clone().add(delta)；
+			
+// 检查碰撞
+if(！checkCollision(newpos)){
+camera.position.copy(newpos)；
+}else{
+//如果碰撞，尝试分别检查X和Z方向的移动
+constconst newPosX=new THREE.Vector3(newPos.x，相机.位置.y，相机.position.z)；newPosX=new THREE.Vector3(newPos.x，相机.位置.y，相机.position.z)；
+if(！checkCollision(newPosX)){
+camera.position.x=newPos.x；
+}
+				
+Const newPosZ=新的三向矢量3(camera.位置。X摄像头位置y，newpos.z)；
+if(！checkCollision(newPosZ)){
+camera.position.z=newPos.z；
+}
+inventoryItem.count--；
+//检查Y方向碰撞
+ConstnewPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY常量newPosY常数newPosY=新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X..z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X..z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)y，照相机.位置.z)；新三向量3(相机.位置带newpos的X..z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的Xy，新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X..z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；新三向量3(相机.位置带newpos的X.y，照相机.位置.z)；
+如果(！checkCollision(newPosY)){
+相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机相机.位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y位置..y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；位置.y=newpos.y；
+}其他{
+// 如果Y方向碰撞，检查是上方还是下方
+如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度如果(速度)如果
+// 下方碰撞，站在地面上
+函数toggleBackpack(){正确；正确；正确；正确；正确；正确；正确；正确；正确；正确；
+。
+}其他{
+// 上方碰撞，停止向上移动
+。
+}}
+}}
+}}
+.
+// 检查是否站在地面上
+ConstgroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheckPosConstroundCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheck KK kPosConstrounddCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConst roundCheckPosConstroundCheckPosConstroundConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConst roundCheckPosConstroundCheckPosConstroundRoundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConstround ConstroundCheckPosConstroundCheckPosConstroundConstroundCheckPosConstroundConstroundCheckPosConstroundCheckPosConstrou ndConstroundConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheck PosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheckPosConstrounddCheck KK kPosConstrounddCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConst roundCheckPosConstroundCheckPosConstroundConst roundCheckPosConstroundCheckPosConstroundConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConst roundConst roundCheckPosConstroundCheckPosConstroundRoundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstround CheckPosConstroundCheckPosConstroundCheckPosConstraundConstund ConstroundCheckPosConstroundCheckPosConstroundConstroundCheckPosConstroundConstroundCheckPosConstround ndConstroundConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstrondCheckPosConstroundCheckPosConstroundCheckPosConstroundConstround roundCheckPosConstroundCheckPosConstroundConst roundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundConstrundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheck kPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstra undCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckP osConstroundCheckPosConstround循环检查PosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheck PosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheckPosConstroundCheck
+groundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgr undCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckCheckPosgr联合国。ygroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundPosg roundCheckPosgroundCheckPosgroundPosgroundCheckPosgroundPosgroundPosgroundCheckPosgroundCheckPosgroundCheckPosgroundPosgrou ndPosgroundPosgroundCheckPosgroundPosgroundCheckPosground循环检查PosgroundCheckPosgroundCheckPosgroundPosgroundCheckPosgroundCheckPosgroundCheckPosgrundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundChun循环检查PosgroundCheckPosgroundPosgroundCheckPosgroundCheckPosgroundPosgroundPosgroundCheckPosgroundCheckChe ckPosgroundCh eckPosgroundCheckPosgroundCheckPosPo sgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosg roundCheckPosgroundCheckPosgroundCheckPosg圆的eckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundYgroundCheckPosgroundCheckkPosgroundCheckPosgr o undCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosground循环检查PosgroundCheckPosgroundPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundPolicy循环检查PosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosPos。ygroundCheckPosgroundCheckPosgroundCheckkPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosGroundCheckPos接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查接地检查ndCheckPosgroundPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundPolicy循环检查PosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheck循环检查PosgroundCheckPosgroundCheckkPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckP osgroundCheckP osground ckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheckPosgroundCheck PosgroundCheckPosgroundCheckPosgroundCheckPosGroundCheckPosGroundCheckPosgroundCheckPosgCheckPosgroundCheckPosground播放器高度//2+0.1；y-=播放器高度/2+0.1；播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；y-=播放器高度/2+0.1；
+isOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGroundisOnGround=checkCollision(groundCheckPos)；checkCollision(groundCheckPos)；checkCollision(groundCheckPos)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(地面检查位置)；checkCollision(groundCheckPos)；checkCollision(groundCheckPos)；checkCollision(groundCheckP操作系统)；
+			
+// 应用摩擦力
+如果(isOnGround){
+速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度。
+速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度速度。
+}其他{
+。*=
+。*=
+}}
+			
+// 渲染场景
+渲染器。 渲染器(场景，摄影机)；
+}}
+
+//等待Three.js加载完成后初始化游戏
+函数checkThreeJSLoaded(){
+// 更新挖掘进度='未定义'){'未定义'){三！ =='未定义'){'未定义'){三！ =='未定义'){'未定义'){三！ =='未定义'){'未定义'){三！ =='未定义'){'未定义'){三！ =='未定义'){
+init()；
+}其他{
+setTimeout(checkThreeJSLoaded，100)；
+}}
+}}
+
+// 页面加载完成后开始初始化
+//更新相机方向ntentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，(){addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{addEventListener('DOMContentLoaded'，()=>{
+checkThreeJSLoaded()；
+;
+<
+<
+<
